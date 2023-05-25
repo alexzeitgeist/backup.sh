@@ -24,19 +24,22 @@ run_as_root=""
 # Function to check SHA256 checksum
 check_sha256_checksum() {
     info_file="${1%.*}.txt"
-    if [ -f "$info_file" ]; then
-        expected_sha256sum=$(awk -F': ' '/SHA256 Checksum/{print $2}' "$info_file")
-        if [ -n "$expected_sha256sum" ]; then
-            echo "Computing SHA256 checksum of the backup file. This may take a while for large files..."
-            actual_sha256sum=$(sha256sum "$1" | cut -d' ' -f1)
-            if [ "$expected_sha256sum" == "$actual_sha256sum" ]; then
-                echo "SHA256 checksum verification passed."
-            else
-                echo "SHA256 checksum verification failed. Please ensure that the backup file has not been tampered with."
-                exit 1
-            fi
-        fi
+    if [ ! -f "$info_file" ]; then
+        return
     fi
+
+    expected_sha256sum=$(awk -F': ' '/SHA256 Checksum/{print $2}' "$info_file")
+    if [ -z "$expected_sha256sum" ]; then
+        return
+    fi
+
+    echo "Computing SHA256 checksum of the backup file. This may take a while for large files..."
+    actual_sha256sum=$(sha256sum "$1" | cut -d' ' -f1)
+    if [ "$expected_sha256sum" != "$actual_sha256sum" ]; then
+        echo "SHA256 checksum verification failed. Please ensure that the backup file has not been tampered with."
+        exit 1
+    fi
+    echo "SHA256 checksum verification passed."
 }
 
 # Function to restore backup

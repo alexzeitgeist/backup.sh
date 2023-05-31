@@ -10,15 +10,15 @@ function display_help() {
     cat <<EOF
 Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
 Options:
-   -x Enable --one-file-system option for tar.
-   -i Only backup the given path(s).
-   -s Skip SHA-256 checksum.
-   -e Enable PGP encryption.
-   -n Skip check for remote root privileges.
-   -r Specify the recipient for PGP encryption.
-   -p Specify the passphrase for PGP encryption.
-   host: user@hostname/IP of the remote server to backup.
-   path: Path(s) to backup or exclude. Multiple paths can be specified.
+   -x              Enable --one-file-system option for tar.
+   -i              Only backup the given path(s).
+   -s              Skip SHA-256 checksum.
+   -e              Enable PGP encryption.
+   -n              Skip check for remote root privileges.
+   -r recipient    Specify the recipient for PGP encryption.
+   -p passphrase   Specify the passphrase for PGP encryption.
+   host            user@hostname/IP of the remote server to backup.
+   path            Path(s) to backup or exclude. Multiple paths can be specified.
 EOF
 }
 

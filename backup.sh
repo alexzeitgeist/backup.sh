@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+IFS=$'\n\t'
+
 # Function for displaying help
 display_help() {
     cat <<EOF
@@ -108,8 +113,8 @@ if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
 fi
 
 # Check for remote host argument
-if [ -z "$1" ]; then
-    echo "Please provide a remote host as the first argument."
+if [ -z "${1:-}" ]; then
+  echo "Provide a remote host."
     display_help
     exit 1
 fi

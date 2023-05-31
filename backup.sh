@@ -7,7 +7,7 @@ IFS=$'\n\t'
 
 # Displays help information.
 function display_help() {
-  cat <<EOF
+    cat <<EOF
 Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
 Options:
    -x Enable --one-file-system option for tar.
@@ -32,20 +32,18 @@ function cleanup() {
 # Trap SIGINT (Ctrl+C)
 trap cleanup SIGINT
 
+# Checks if GPG key exists.
 function key_exists() {
-    local key="$1"
-    if ! gpg --list-keys "$key" >/dev/null 2>&1; then
-        echo "Recipient key not found in the keychain."
+    if ! gpg --list-keys "$1" >/dev/null 2>&1; then
+        echo "Recipient key not found."
         exit 1
     fi
 }
 
+# Checks for remote root access.
 function check_root_access() {
-    local remote_host="$1"
-    if ssh "$remote_host" 'test "$(id -u)" -eq 0'; then
-        return 0
-    else
-        echo "You must have root privileges on the remote host to perform a complete backup."
+    if ! ssh "$1" 'test "$(id -u)" -eq 0'; then
+        echo "Need root privileges on remote host."
         exit 1
     fi
 }
@@ -107,17 +105,17 @@ fi
 
 # Check for remote host argument
 if [ -z "${1:-}" ]; then
-  echo "Provide a remote host."
+    echo "Provide a remote host."
     display_help
     exit 1
 fi
 
-remote_host=$1
+host=$1
 shift 1
 
 # Check for remote root access if not disabled
 if [ "$no_root_check_flag" != "yes" ]; then
-    check_root_access "$remote_host"
+    check_root_access "$host"
 fi
 
 # Process paths
@@ -132,14 +130,14 @@ for path in "$@"; do
 done
 
 timestamp=$(date +%s)
-backup_file_name="$(echo "$remote_host" | cut -d'@' -f2)_backup_${timestamp}.tar.zst"
+backup_file_name="$(echo "$host" | cut -d'@' -f2)_backup_${timestamp}.tar.zst"
 
 # Perform backup and measure time
 start_time=$(date +%s)
 if [ "$ignore_exclude_flag" == "yes" ]; then
-    ssh "$remote_host" 'tar '"$one_file_system_flag"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file_name"
+    ssh "$host" 'tar '"$one_file_system_flag"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file_name"
 else
-    ssh "$remote_host" 'tar '"$one_file_system_flag"' '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' -cvf - /' | zstd -T0 -o "$backup_file_name"
+    ssh "$host" 'tar '"$one_file_system_flag"' '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' -cvf - /' | zstd -T0 -o "$backup_file_name"
 fi
 end_time=$(date +%s)
 elapsed_time=$((end_time - start_time))
@@ -182,7 +180,7 @@ backup_info_file="${backup_file_name%.*}.txt"
     echo
     echo "BACKUP SUMMARY"
     echo "--------------"
-    echo "Hostname           : $(echo "$remote_host" | cut -d'@' -f2)"
+    echo "Hostname           : $(echo "$host" | cut -d'@' -f2)"
     echo "Backup File        : $backup_file_name"
     echo "File Size          : $backup_file_size"
     echo "Elapsed Time       : $elapsed_time seconds"

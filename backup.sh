@@ -99,12 +99,12 @@ done
 shift $((OPTIND - 1))
 
 # Check for the presence of the recipient's public key if PGP encryption is requested
-if [ "$encrypt" == "yes" ] && [ -n "$recipient" ]; then
+if [[ "$encrypt" == "yes" && -n "$recipient" ]]; then
     key_exists "$recipient"
 fi
 
 # Check for remote host argument
-if [ -z "${1:-}" ]; then
+if [[ -z "${1:-}" ]]; then
     echo "Specify a remote host."
     display_help
     exit 1
@@ -114,14 +114,14 @@ host=$1
 shift 1
 
 # Check for remote root access if not disabled
-if [ "$no_root_check" != "yes" ]; then
+if [[ "$no_root_check" != "yes" ]]; then
     check_root_access "$host"
 fi
 
 # Process paths
 for path in "$@"; do
     path="${path%/}" # Remove trailing slashes
-    if [ "$ignore_exclude" == "yes" ]; then
+    if [[ "$ignore_exclude" == "yes" ]]; then
         include_paths+=("$path")
     else
         [[ "$path" != */'*' ]] && path="${path}/*"
@@ -133,7 +133,7 @@ done
 start=$(date +%s)
 backup_file="$(echo "$host" | cut -d'@' -f2)_backup_${start}.tar.zst"
 
-if [ "$ignore_exclude" == "yes" ]; then
+if [[ "$ignore_exclude" == "yes" ]]; then
     ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file"
 else
     ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file"
@@ -144,12 +144,12 @@ fi
 elapsed=$(($(date +%s) - start))
 
 # Encrypt the backup file if encryption is enabled
-if [ "$encrypt" == "yes" ]; then
+if [[ "$encrypt" == "yes" ]]; then
     if [ -n "$recipient" ]; then
         gpg --yes --batch -z 0 --recipient="$recipient" --output "${backup_file}.gpg" --encrypt "$backup_file" && rm "$backup_file"
         backup_file="${backup_file}.gpg"
     else
-        if [ -z "$passphrase" ]; then
+        if [[ -z "$passphrase" ]]; then
             while true; do
                 echo -n "Enter passphrase: "
                 read -r -s passphrase

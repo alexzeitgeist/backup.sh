@@ -5,27 +5,20 @@ set -o nounset
 set -o pipefail
 IFS=$'\n\t'
 
-# Function for displaying help
-display_help() {
-    cat <<EOF
-Usage: $0 [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] remote_host [path1] [path2] ...
+# Displays help information.
+function display_help() {
+  cat <<EOF
+Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
 Options:
-   -x              Enable --one-file-system option for tar (optional).
-   -i              Ignore all pre-defined exclude paths and only backup the given path(s).
-   -s              Skip generating SHA-256 checksum.
-   -e              Encrypt the backup file using PGP.
-   -n              Disable the check for the remote root privileges.
-   -r recipient    Specify the recipient for PGP encryption (optional).
-   -p passphrase   Specify the passphrase for PGP encryption (optional).
-   remote_host     The user@hostname or IP address of the remote server to backup.
-   path            Path(s) to backup (optional) if -i option is used or to exclude from backup if -i is not used.
-                   Multiple paths can be specified.
-
-The script will create a tar archive of the remote server's filesystem,
-excluding certain system directories and any additional paths specified.
-If the -i option is used, only the given paths are backed up.
-The archive will then be compressed using zstd and saved locally with the filename format:
-<hostname>_backup_<timestamp>.tar.zst
+   -x Enable --one-file-system option for tar.
+   -i Only backup the given path(s).
+   -s Skip SHA-256 checksum.
+   -e Enable PGP encryption.
+   -n Skip check for remote root privileges.
+   -r Specify the recipient for PGP encryption.
+   -p Specify the passphrase for PGP encryption.
+   host: user@hostname/IP of the remote server to backup.
+   path: Path(s) to backup or exclude. Multiple paths can be specified.
 EOF
 }
 

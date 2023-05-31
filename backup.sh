@@ -3,7 +3,7 @@
 # Function for displaying help
 display_help() {
     cat <<EOF
-Usage: $0 [-x] [-i] [-s] [-e] [-r recipient] [-p passphrase] remote_host [path1] [path2] ...
+Usage: $0 [-x] [-i] [-s] [-e] [-r recipient] [-p passphrase] [-n] remote_host [path1] [path2] ...
 Options:
    -x              Enable --one-file-system option for tar (optional).
    -i              Ignore all pre-defined exclude paths and only backup the given path(s).
@@ -11,6 +11,7 @@ Options:
    -e              Encrypt the backup file using PGP.
    -r recipient    Specify the recipient for PGP encryption (optional).
    -p passphrase   Specify the passphrase for PGP encryption (optional).
+   -n              Skip checking for root access on the remote host.
    remote_host     The user@hostname or IP address of the remote server to backup.
    path            Path(s) to backup (optional) if -i option is used or to exclude from backup if -i is not used.
                    Multiple paths can be specified.
@@ -41,18 +42,29 @@ check_key() {
     fi
 }
 
+check_remote_root() {
+    local remote_host="$1"
+    if ssh "$remote_host" 'test "$(id -u)" -eq 0'; then
+        return 0
+    else
+        echo "You must have root privileges on the remote host to perform a complete backup."
+        exit 1
+    fi
+}
+
 # Variables
 one_file_system_flag=""
 ignore_exclude_flag=""
 skip_checksum_flag=""
 encrypt_flag=""
+no_root_check_flag=""
 recipient=""
 passphrase=""
 exclude_paths=("/dev/*" "/proc/*" "/sys/*" "/run/*" "/tmp/*" "/var/log/*")
 include_paths=()
 
 # Parse options
-while getopts ":xiser:p:h" opt; do
+while getopts ":xisenr:p:h" opt; do
     case ${opt} in
     x)
         one_file_system_flag="--one-file-system"
@@ -73,6 +85,9 @@ while getopts ":xiser:p:h" opt; do
     p)
         passphrase="$OPTARG"
         encrypt_flag="yes"
+        ;;
+    n)
+        no_root_check_flag="yes"
         ;;
     h)
         display_help
@@ -100,6 +115,11 @@ shift 1
 # Check for the presence of the recipient's public key if PGP encryption is requested
 if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
     check_key "$recipient"
+fi
+
+# Check for remote root access unless -n was given
+if [ "$no_root_check_flag" != "yes" ]; then
+    check_remote_root "$remote_host"
 fi
 
 # Process paths

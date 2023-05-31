@@ -151,16 +151,16 @@ if [ "$encrypt" == "yes" ]; then
     else
         if [ -z "$passphrase" ]; then
             while true; do
-                echo -n "Please enter encryption passphrase: "
+                echo -n "Enter passphrase: "
                 read -r -s passphrase
                 echo
-                echo -n "Please re-enter encryption passphrase: "
-                read -r -s passphrase_verify
+                echo -n "Re-enter passphrase: "
+                read -r -s verify
                 echo
-                if [ "$passphrase" == "$passphrase_verify" ]; then
+                if [[ "$passphrase" == "$verify" ]]; then
                     break
                 else
-                    echo "Passphrases do not match. Please try again."
+                    echo "Passphrases don't match. Try again."
                 fi
             done
         fi

@@ -3,15 +3,15 @@
 # Function for displaying help
 display_help() {
     cat <<EOF
-Usage: $0 [-x] [-i] [-s] [-e] [-r recipient] [-p passphrase] [-n] remote_host [path1] [path2] ...
+Usage: $0 [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] remote_host [path1] [path2] ...
 Options:
    -x              Enable --one-file-system option for tar (optional).
    -i              Ignore all pre-defined exclude paths and only backup the given path(s).
    -s              Skip generating SHA-256 checksum.
    -e              Encrypt the backup file using PGP.
+   -n              Disable the check for the remote root privileges.
    -r recipient    Specify the recipient for PGP encryption (optional).
    -p passphrase   Specify the passphrase for PGP encryption (optional).
-   -n              Skip checking for root access on the remote host.
    remote_host     The user@hostname or IP address of the remote server to backup.
    path            Path(s) to backup (optional) if -i option is used or to exclude from backup if -i is not used.
                    Multiple paths can be specified.
@@ -78,6 +78,9 @@ while getopts ":xisenr:p:h" opt; do
     e)
         encrypt_flag="yes"
         ;;
+    n)
+        no_root_check_flag="yes"
+        ;;
     r)
         recipient="$OPTARG"
         encrypt_flag="yes"
@@ -85,9 +88,6 @@ while getopts ":xisenr:p:h" opt; do
     p)
         passphrase="$OPTARG"
         encrypt_flag="yes"
-        ;;
-    n)
-        no_root_check_flag="yes"
         ;;
     h)
         display_help
@@ -102,6 +102,11 @@ while getopts ":xisenr:p:h" opt; do
 done
 shift $((OPTIND - 1))
 
+# Check for the presence of the recipient's public key if PGP encryption is requested
+if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
+    check_key "$recipient"
+fi
+
 # Check for remote host argument
 if [ -z "$1" ]; then
     echo "Please provide a remote host as the first argument."
@@ -112,12 +117,7 @@ fi
 remote_host=$1
 shift 1
 
-# Check for the presence of the recipient's public key if PGP encryption is requested
-if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
-    check_key "$recipient"
-fi
-
-# Check for remote root access unless -n was given
+# Check for remote root access if not disabled
 if [ "$no_root_check_flag" != "yes" ]; then
     check_remote_root "$remote_host"
 fi
@@ -187,27 +187,31 @@ backup_info_file="${backup_file_name%.*}.txt"
     echo "Hostname           : $(echo "$remote_host" | cut -d'@' -f2)"
     echo "Backup File        : $backup_file_name"
     echo "File Size          : $backup_file_size"
-    if [ "$skip_checksum_flag" != "yes" ]; then
-        echo "SHA256 Checksum    : $backup_sha256sum"
-    fi
-    echo "Backup Time (secs) : $elapsed_time"
+    echo "Elapsed Time       : $elapsed_time seconds"
     echo "Date & Time        : $(date)"
-    echo "Backup Options     : One-File-System $(if [ -z "$one_file_system_flag" ]; then echo 'NO'; else echo 'YES'; fi) | Skip Checksum $(if [ -z "$skip_checksum_flag" ]; then echo 'NO'; else echo 'YES'; fi) | Encryption $(if [ -z "$encrypt_flag" ]; then echo 'NO'; else echo 'YES'; fi)"
+    [ "$skip_checksum_flag" == "yes" ] || echo "SHA-256 Checksum    : $backup_sha256sum"
     echo
-    echo "PATHS INFORMATION"
-    echo "-----------------"
+    echo "BACKUP OPTIONS"
+    echo "--------------"
+    echo "One File System    : $([ "$one_file_system_flag" == "--one-file-system" ] && echo "Yes" || echo "No")"
+    echo "Ignore Excludes    : $([ "$ignore_exclude_flag" == "yes" ] && echo "Yes" || echo "No")"
+    echo "Skip Checksum      : $([ "$skip_checksum_flag" == "yes" ] && echo "Yes" || echo "No")"
+    echo "Encryption         : $([ "$encrypt_flag" == "yes" ] && echo "Yes" || echo "No")"
+    echo "Skip Root Check    : $([ "$no_root_check_flag" == "yes" ] && echo "Yes" || echo "No")"
+    echo
+    echo "BACKUP CONTENT"
+    echo "--------------"
     if [ "$ignore_exclude_flag" == "yes" ]; then
-        echo "Paths Included:"
+        echo "Included Paths:"
         for path in "${include_paths[@]}"; do
             echo "  - $path"
         done
     else
-        echo "Paths Excluded:"
+        echo "Excluded Paths:"
         for path in "${exclude_paths[@]}"; do
             echo "  - $path"
         done
     fi
-    echo "======================================================="
 } >"$backup_info_file"
 
-echo "Backup info saved to $backup_info_file."
+echo "Backup completed successfully. See $backup_info_file for more details."

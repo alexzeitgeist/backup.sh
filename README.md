@@ -10,10 +10,10 @@ Two bash scripts for creating and restoring a backup of a remote server's filesy
 ### Backup Script (`backup.sh`)
 
 ```bash
-./backup.sh [-x] [-i] [-s] [-e] [-r recipient] [-p passphrase] remote_host [path1] [path2] ...
+./backup.sh [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
 ```
 
-Options include: `-x`, `-i`, `-s`, `-e`, `-r recipient`, `-p`, `remote_host`, `path`.
+Options include: `-x`, `-i`, `-s`, `-e`, `-n`, `-r recipient`, `-p passphrase`, `host`, `path`.
 
 The script creates a tar archive, optionally compresses, and encrypts it. Outputs are `<hostname>_backup_<timestamp>.tar.zst` and `<hostname>_backup_<timestamp>.tar.zst.txt`.
 

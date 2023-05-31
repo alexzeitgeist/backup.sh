@@ -33,6 +33,14 @@ cleanup() {
 # Trap SIGINT (Ctrl+C)
 trap cleanup SIGINT
 
+check_key() {
+    local key="$1"
+    if ! gpg --list-keys "$key" >/dev/null 2>&1; then
+        echo "Recipient key not found in the keychain."
+        exit 1
+    fi
+}
+
 # Variables
 one_file_system_flag=""
 ignore_exclude_flag=""
@@ -88,6 +96,11 @@ fi
 
 remote_host=$1
 shift 1
+
+# Check for the presence of the recipient's public key if PGP encryption is requested
+if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
+    check_key "$recipient"
+fi
 
 # Process paths
 for path in "$@"; do

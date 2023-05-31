@@ -139,6 +139,8 @@ else
     ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file"
 fi
 
+# todo: if backup fails, perhaps due to access right issues, the rest is not executed. We should somehow catch errors
+
 elapsed=$(($(date +%s) - start))
 
 # Encrypt the backup file if encryption is enabled
@@ -208,5 +210,8 @@ backup_info_file="${backup_file%.*}.txt"
         done
     fi
 } >"$backup_info_file"
+
+# Cleans up.
+trap - SIGINT
 
 echo "Backup completed successfully. See $backup_info_file for more details."

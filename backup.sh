@@ -25,7 +25,7 @@ EOF
 # Function to cleanup upon receiving SIGINT (Ctrl+C)
 function cleanup() {
     echo "Backup interrupted. Cleaning up..."
-    rm -f "$backup_file_name"
+    rm -f "$backup_file"
     exit 1
 }
 
@@ -129,24 +129,23 @@ for path in "$@"; do
     fi
 done
 
-timestamp=$(date +%s)
-backup_file_name="$(echo "$host" | cut -d'@' -f2)_backup_${timestamp}.tar.zst"
+# Backup and measure time.
+start=$(date +%s)
+backup_file="$(echo "$host" | cut -d'@' -f2)_backup_${start}.tar.zst"
 
-# Perform backup and measure time
-start_time=$(date +%s)
 if [ "$ignore_exclude" == "yes" ]; then
-    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file_name"
+    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file"
 else
-    ssh "$host" 'tar '"$one_file_system"' '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' -cvf - /' | zstd -T0 -o "$backup_file_name"
+    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file"
 fi
-end_time=$(date +%s)
-elapsed_time=$((end_time - start_time))
+
+elapsed=$(($(date +%s) - start))
 
 # Encrypt the backup file if encryption is enabled
 if [ "$encrypt" == "yes" ]; then
     if [ -n "$recipient" ]; then
-        gpg --yes --batch -z 0 --recipient="$recipient" --output "${backup_file_name}.gpg" --encrypt "$backup_file_name" && rm "$backup_file_name"
-        backup_file_name="${backup_file_name}.gpg"
+        gpg --yes --batch -z 0 --recipient="$recipient" --output "${backup_file}.gpg" --encrypt "$backup_file" && rm "$backup_file"
+        backup_file="${backup_file}.gpg"
     else
         if [ -z "$passphrase" ]; then
             while true; do
@@ -163,15 +162,15 @@ if [ "$encrypt" == "yes" ]; then
                 fi
             done
         fi
-        echo "$passphrase" | gpg --yes --batch -z 0 --passphrase-fd 0 --symmetric --output "${backup_file_name}.gpg" "$backup_file_name" && rm "$backup_file_name"
-        backup_file_name="${backup_file_name}.gpg"
+        echo "$passphrase" | gpg --yes --batch -z 0 --passphrase-fd 0 --symmetric --output "${backup_file}.gpg" "$backup_file" && rm "$backup_file"
+        backup_file="${backup_file}.gpg"
     fi
 fi
 
 # Create backup info file
-backup_file_size=$(du -sh "$backup_file_name" | cut -f1)
-backup_sha256sum=$([ "$skip_checksum" == "yes" ] || sha256sum "$backup_file_name" | cut -d' ' -f1)
-backup_info_file="${backup_file_name%.*}.txt"
+backup_file_size=$(du -sh "$backup_file" | cut -f1)
+backup_sha256sum=$([ "$skip_checksum" == "yes" ] || sha256sum "$backup_file" | cut -d' ' -f1)
+backup_info_file="${backup_file%.*}.txt"
 
 {
     echo "======================================================="
@@ -181,9 +180,9 @@ backup_info_file="${backup_file_name%.*}.txt"
     echo "BACKUP SUMMARY"
     echo "--------------"
     echo "Hostname           : $(echo "$host" | cut -d'@' -f2)"
-    echo "Backup File        : $backup_file_name"
+    echo "Backup File        : $backup_file"
     echo "File Size          : $backup_file_size"
-    echo "Elapsed Time       : $elapsed_time seconds"
+    echo "Elapsed Time       : $elapsed seconds"
     echo "Date & Time        : $(date)"
     [ "$skip_checksum" == "yes" ] || echo "SHA-256 Checksum    : $backup_sha256sum"
     echo

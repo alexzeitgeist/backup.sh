@@ -23,7 +23,7 @@ EOF
 }
 
 # Function to cleanup upon receiving SIGINT (Ctrl+C)
-cleanup() {
+function cleanup() {
     echo "Backup interrupted. Cleaning up..."
     rm -f "$backup_file_name"
     exit 1
@@ -32,7 +32,7 @@ cleanup() {
 # Trap SIGINT (Ctrl+C)
 trap cleanup SIGINT
 
-check_key() {
+function key_exists() {
     local key="$1"
     if ! gpg --list-keys "$key" >/dev/null 2>&1; then
         echo "Recipient key not found in the keychain."
@@ -40,7 +40,7 @@ check_key() {
     fi
 }
 
-check_remote_root() {
+function check_root_access() {
     local remote_host="$1"
     if ssh "$remote_host" 'test "$(id -u)" -eq 0'; then
         return 0
@@ -102,7 +102,7 @@ shift $((OPTIND - 1))
 
 # Check for the presence of the recipient's public key if PGP encryption is requested
 if [ "$encrypt_flag" == "yes" ] && [ -n "$recipient" ]; then
-    check_key "$recipient"
+    key_exists "$recipient"
 fi
 
 # Check for remote host argument
@@ -117,7 +117,7 @@ shift 1
 
 # Check for remote root access if not disabled
 if [ "$no_root_check_flag" != "yes" ]; then
-    check_remote_root "$remote_host"
+    check_root_access "$remote_host"
 fi
 
 # Process paths

@@ -6,7 +6,7 @@ set -o pipefail
 IFS=$'\n\t'
 
 # Displays help information.
-function display_help() {
+display_help() {
     cat <<EOF
 Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
 Options:
@@ -23,8 +23,8 @@ EOF
 }
 
 # Function to cleanup upon receiving SIGINT (Ctrl+C)
-function cleanup() {
-    echo "Backup interrupted. Cleaning up..."
+cleanup() {
+    printf "Backup interrupted. Cleaning up...\n"
     rm -f "$backup_file"
     exit 1
 }
@@ -33,7 +33,7 @@ function cleanup() {
 trap cleanup SIGINT
 
 # Checks if GPG key exists.
-function key_exists() {
+key_exists() {
     if ! gpg --list-keys "$1" >/dev/null 2>&1; then
         echo "Recipient key not found."
         exit 1
@@ -41,7 +41,7 @@ function key_exists() {
 }
 
 # Checks for remote root access.
-function check_root_access() {
+check_root_access() {
     if ! ssh "$1" 'test "$(id -u)" -eq 0'; then
         echo "Need root privileges on remote host."
         exit 1
@@ -171,7 +171,7 @@ fi
 
 # Create backup info file
 backup_file_size=$(du -sh "$backup_file" | cut -f1)
-backup_sha256sum=$([ "$skip_checksum" == "yes" ] || sha256sum "$backup_file" | cut -d' ' -f1)
+backup_sha256sum=$([[ "$skip_checksum" == "yes" ]] || sha256sum "$backup_file" | cut -d' ' -f1)
 backup_info_file="${backup_file%.*}.txt"
 
 {
@@ -186,7 +186,7 @@ backup_info_file="${backup_file%.*}.txt"
     echo "File Size          : $backup_file_size"
     echo "Elapsed Time       : $elapsed seconds"
     echo "Date & Time        : $(date)"
-    [ "$skip_checksum" == "yes" ] || echo "SHA-256 Checksum    : $backup_sha256sum"
+    [[ "$skip_checksum" == "yes" ]] || echo "SHA-256 Checksum    : $backup_sha256sum"
     echo
     echo "BACKUP OPTIONS"
     echo "--------------"
@@ -198,7 +198,7 @@ backup_info_file="${backup_file%.*}.txt"
     echo
     echo "BACKUP CONTENT"
     echo "--------------"
-    if [ "$ignore_exclude" == "yes" ]; then
+    if [[ "$ignore_exclude" == "yes" ]]; then
         echo "Included Paths:"
         for path in "${include_paths[@]}"; do
             echo "  - $path"

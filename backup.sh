@@ -5,6 +5,12 @@ set -o nounset
 set -o pipefail
 IFS=$'\n\t'
 
+# Capture the original command
+original_command="$(basename "$0") $(
+    IFS=" "
+    echo "$*"
+)"
+
 # Displays help information.
 display_help() {
     cat <<EOF
@@ -199,6 +205,10 @@ backup_info_file="${backup_file%.*}.txt"
     echo "Elapsed Time       : $elapsed seconds"
     echo "Date & Time        : $(date)"
     [[ "$skip_checksum" == "yes" ]] || echo "SHA-256 Checksum    : $backup_sha256sum"
+    echo
+    echo "BACKUP COMMAND"
+    echo "--------------"
+    echo "$original_command"
     echo
     echo "BACKUP OPTIONS"
     echo "--------------"

@@ -152,12 +152,22 @@ start=$(date +%s)
 backup_file="$(echo "$host" | cut -d'@' -f2)_backup_${start}.tar.zst"
 
 if [[ "$ignore_exclude" == "yes" ]]; then
-    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file"
+    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file" || exit_status=$?
 else
-    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file"
+    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file" || exit_status=$?
 fi
 
-# todo: if backup fails, perhaps due to access right issues, the rest is not executed. We should somehow catch errors
+# Handle the exit status of tar
+if [ -n "$exit_status" ]; then
+    if [ $exit_status -eq 1 ]; then
+        echo "tar returned 1. Some files were changed during archiving."
+        # Continue with rest of the script
+    else
+        # Handle other non-zero exit status if needed
+        echo "An error occurred with exit status: $exit_status"
+        kill -s SIGINT $$
+    fi
+fi
 
 elapsed=$(($(date +%s) - start))
 

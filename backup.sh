@@ -14,10 +14,11 @@ original_command="$(basename "$0") $(
 # Displays help information.
 display_help() {
     cat <<EOF
-Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [[-f] path1] [[-f] path2] ...
+Usage: ${0} [-x] [-i] [-c] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [[-f] path1] [[-f] path2] ...
 Options:
    -x              Enable --one-file-system option for tar.
    -i              Only backup the given path(s).
+   -c              Continue if tar returns 1 (files changed during archiving).
    -s              Skip SHA-256 checksum.
    -e              Enable PGP encryption.
    -n              Skip check for remote root privileges.
@@ -59,6 +60,7 @@ declare -a exclude_paths=("/dev/*" "/proc/*" "/sys/*" "/run/*" "/tmp/*" "/var/lo
 declare -a include_paths=()
 one_file_system=""
 ignore_exclude=""
+continue_on_tar_error=""
 skip_checksum=""
 encrypt=""
 no_root_check=""
@@ -66,13 +68,16 @@ recipient=""
 passphrase=""
 
 # Parse options
-while getopts ":xisenr:p:h" opt; do
+while getopts ":xicsenr:p:h" opt; do
     case ${opt} in
     x)
         one_file_system="--one-file-system"
         ;;
     i)
         ignore_exclude="yes"
+        ;;
+    c)
+        continue_on_tar_error="yes"
         ;;
     s)
         skip_checksum="yes"
@@ -161,7 +166,9 @@ fi
 if [ -n "$exit_status" ]; then
     if [ $exit_status -eq 1 ]; then
         echo "tar returned 1. Some files were changed during archiving."
-        # Continue with rest of the script
+        if [ "$continue_on_tar_error" != "yes" ]; then
+            kill -s SIGINT $$
+        fi
     else
         # Handle other non-zero exit status if needed
         echo "An error occurred with exit status: $exit_status"

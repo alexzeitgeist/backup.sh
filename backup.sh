@@ -8,7 +8,7 @@ IFS=$'\n\t'
 # Displays help information.
 display_help() {
     cat <<EOF
-Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [path1] [path2] ...
+Usage: ${0} [-x] [-i] [-s] [-e] [-n] [-r recipient] [-p passphrase] host [[-f] path1] [[-f] path2] ...
 Options:
    -x              Enable --one-file-system option for tar.
    -i              Only backup the given path(s).
@@ -18,7 +18,7 @@ Options:
    -r recipient    Specify the recipient for PGP encryption.
    -p passphrase   Specify the passphrase for PGP encryption.
    host            user@hostname/IP of the remote server to backup.
-   path            Path(s) to backup or exclude. Multiple paths can be specified.
+   [-f] path       Path(s) to backup or exclude. Use -f before a path to treat it as a file. Multiple paths can be specified.
 EOF
 }
 
@@ -118,15 +118,27 @@ if [[ "$no_root_check" != "yes" ]]; then
     check_root_access "$host"
 fi
 
-# Process paths
-for path in "$@"; do
-    path="${path%/}" # Remove trailing slashes
+# Process paths (or files if -f was given)
+is_file=false
+for arg in "$@"; do
+    if [[ "$arg" == "-f" ]]; then
+        is_file=true
+        continue
+    fi
+
+    path="${arg%/}" # Remove trailing slashes
+
     if [[ "$ignore_exclude" == "yes" ]]; then
         include_paths+=("$path")
     else
-        [[ "$path" != */'*' ]] && path="${path}/*"
+        if [[ "$is_file" == false ]]; then
+            [[ "$path" != */'*' ]] && path="${path}/*"
+        fi
         exclude_paths+=("$path")
     fi
+
+    # Reset is_file flag for the next argument
+    is_file=false
 done
 
 # Backup and measure time.

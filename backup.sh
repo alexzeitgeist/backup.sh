@@ -156,6 +156,7 @@ done
 start=$(date +%s)
 backup_file="$(echo "$host" | cut -d'@' -f2)_backup_${start}.tar.zst"
 
+exit_status=""
 if [[ "$ignore_exclude" == "yes" ]]; then
     ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file" || exit_status=$?
 else

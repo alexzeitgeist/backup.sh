@@ -50,20 +50,12 @@ check_sha256_checksum() {
 
 # Function to restore backup
 restore_backup() {
-    if [ ${#extract_paths[@]} -eq 0 ]; then
-        if [[ "$1" == *.gpg ]]; then
-            echo "Backup file is encrypted. Decrypting..."
-            gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2"
-        else
-            zstdcat "$1" | $run_as_root tar xvf - -C "$2"
-        fi
+    local paths=("${extract_paths[@]:-}")
+    if [[ "$1" == *.gpg ]]; then
+        echo "Backup file is encrypted. Decrypting..."
+        gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2" "${paths[@]}"
     else
-        if [[ "$1" == *.gpg ]]; then
-            echo "Backup file is encrypted. Decrypting..."
-            gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2" "${extract_paths[@]}"
-        else
-            zstdcat "$1" | $run_as_root tar xvf - -C "$2" "${extract_paths[@]}"
-        fi
+        zstdcat "$1" | $run_as_root tar xvf - -C "$2" "${paths[@]}"
     fi
     echo "Backup successfully restored to $2."
 }

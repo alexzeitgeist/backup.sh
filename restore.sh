@@ -3,12 +3,13 @@
 # Function for displaying help
 display_help() {
     cat <<EOF
-Usage: $0 [-s] [-r] [-l] backup_file [destination]
+Usage: $0 [-s] [-r] [-l] [-p path]... backup_file [destination]
 
 Options:
    -s              Extract the backup in the specified directory, not in a sub-directory.
    -r              Extract the backup as root.
    -l              List the contents of the backup file without extracting it.
+   -p path         Specify a path to extract from the backup. This option can be used multiple times to specify multiple paths.
    backup_file     The path of the backup file to restore.
    destination     The directory where the backup should be restored (optional, defaults to current directory).
 
@@ -16,6 +17,7 @@ The script will extract the backup into a subdirectory of the specified director
 If the -s option is used, the backup will be extracted directly into the specified directory.
 If the -r option is used, the backup will be extracted as the root user.
 If the -l option is used, the script will list the contents of the backup file without extracting it.
+If the -p option is used, only the specified paths will be extracted from the backup.
 If the backup is encrypted, you will be prompted for the decryption key.
 EOF
 }
@@ -23,6 +25,7 @@ EOF
 # Variables
 run_as_root=""
 list_only=false
+declare -a extract_paths=()
 
 # Function to check SHA256 checksum
 check_sha256_checksum() {
@@ -47,11 +50,20 @@ check_sha256_checksum() {
 
 # Function to restore backup
 restore_backup() {
-    if [[ "$1" == *.gpg ]]; then
-        echo "Backup file is encrypted. Decrypting..."
-        gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2"
+    if [ ${#extract_paths[@]} -eq 0 ]; then
+        if [[ "$1" == *.gpg ]]; then
+            echo "Backup file is encrypted. Decrypting..."
+            gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2"
+        else
+            zstdcat "$1" | $run_as_root tar xvf - -C "$2"
+        fi
     else
-        zstdcat "$1" | $run_as_root tar xvf - -C "$2"
+        if [[ "$1" == *.gpg ]]; then
+            echo "Backup file is encrypted. Decrypting..."
+            gpg -d "$1" | zstdcat | $run_as_root tar xvf - -C "$2" "${extract_paths[@]}"
+        else
+            zstdcat "$1" | $run_as_root tar xvf - -C "$2" "${extract_paths[@]}"
+        fi
     fi
     echo "Backup successfully restored to $2."
 }
@@ -59,14 +71,15 @@ restore_backup() {
 list_backup_content() {
     if [[ "$1" == *.gpg ]]; then
         echo "Backup file is encrypted. Decrypting..."
-        gpg -d "$1" | zstdcat | $run_as_root tar tvf - 
+        gpg -d "$1" | zstdcat | $run_as_root tar tvf -
     else
         zstdcat "$1" | $run_as_root tar tvf -
     fi
 }
+
 # Parse options
 extract_in_subdir_flag="yes"
-while getopts ":srlh" opt; do
+while getopts ":srlhp:" opt; do
     case ${opt} in
     s)
         extract_in_subdir_flag="no"
@@ -76,6 +89,9 @@ while getopts ":srlh" opt; do
         ;;
     l)
         list_only=true
+        ;;
+    p)
+        extract_paths+=("$OPTARG")
         ;;
     h)
         display_help

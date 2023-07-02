@@ -20,10 +20,10 @@ The script creates a tar archive, optionally compresses, and encrypts it. Output
 ### Restore Script (`restore.sh`)
 
 ```bash
-./restore.sh [-s] [-r] backup_file [destination]
+./restore.sh [-s] [-r] [-l] [-p path]... backup_file [destination]
 ```
 
-Options include: `-s`, `-r`, `backup_file`, `destination`.
+Options include: `-s`, `-r`, `-l`, `-p path`, `backup_file`, `destination`.
 
 The script decrypts (if necessary) and extracts the backup. If the backup is encrypted, you will be prompted for the decryption key. It verifies the SHA256 checksum before restoring.
 

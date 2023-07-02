@@ -3,23 +3,26 @@
 # Function for displaying help
 display_help() {
     cat <<EOF
-Usage: $0 [-s] [-r] backup_file [destination]
+Usage: $0 [-s] [-r] [-l] backup_file [destination]
 
 Options:
    -s              Extract the backup in the specified directory, not in a sub-directory.
    -r              Extract the backup as root.
+   -l              List the contents of the backup file without extracting it.
    backup_file     The path of the backup file to restore.
    destination     The directory where the backup should be restored (optional, defaults to current directory).
 
 The script will extract the backup into a subdirectory of the specified directory or the current directory if no directory is specified.
 If the -s option is used, the backup will be extracted directly into the specified directory.
 If the -r option is used, the backup will be extracted as the root user.
+If the -l option is used, the script will list the contents of the backup file without extracting it.
 If the backup is encrypted, you will be prompted for the decryption key.
 EOF
 }
 
 # Variables
 run_as_root=""
+list_only=false
 
 # Function to check SHA256 checksum
 check_sha256_checksum() {
@@ -53,15 +56,26 @@ restore_backup() {
     echo "Backup successfully restored to $2."
 }
 
+list_backup_content() {
+    if [[ "$1" == *.gpg ]]; then
+        echo "Backup file is encrypted. Decrypting..."
+        gpg -d "$1" | zstdcat | $run_as_root tar tvf - 
+    else
+        zstdcat "$1" | $run_as_root tar tvf -
+    fi
+}
 # Parse options
 extract_in_subdir_flag="yes"
-while getopts ":srh" opt; do
+while getopts ":srlh" opt; do
     case ${opt} in
     s)
         extract_in_subdir_flag="no"
         ;;
     r)
         run_as_root="sudo"
+        ;;
+    l)
+        list_only=true
         ;;
     h)
         display_help
@@ -85,6 +99,11 @@ fi
 
 backup_file="$1"
 shift 1
+
+if $list_only; then
+    list_backup_content "$backup_file"
+    exit 0
+fi
 
 destination=${1:-.} # Default to current directory if no destination specified
 

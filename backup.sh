@@ -49,10 +49,18 @@ key_exists() {
 
 # Checks for remote root access.
 check_root_access() {
-    if ! ssh "$1" 'test "$(id -u)" -eq 0'; then
-        echo "Need root privileges on remote host."
-        exit 1
+    # Check if we're root and store the result
+    if ssh "$1" 'test "$(id -u)" -eq 0'; then
+        is_root="yes"
+        return 0
     fi
+    # Not root, try sudo
+    if ssh "$1" 'command -v sudo >/dev/null 2>&1 && sudo -n id -u >/dev/null 2>&1'; then
+        is_root="no"
+        return 0
+    fi
+    echo "Need either root access or sudo privileges on remote host."
+    exit 1
 }
 
 # Variables
@@ -66,6 +74,7 @@ encrypt=""
 no_root_check=""
 recipient=""
 passphrase=""
+is_root=""
 
 # Parse options
 while getopts ":xicsenr:p:h" opt; do
@@ -157,10 +166,17 @@ start=$(date +%s)
 backup_file="$(echo "$host" | cut -d'@' -f2)_backup_${start}.tar.zst"
 
 exit_status=""
+use_sudo=""
+[[ "$is_root" != "yes" ]] && use_sudo="sudo"
+
 if [[ "$ignore_exclude" == "yes" ]]; then
-    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf '%q ' "${include_paths[@]}")"'' | zstd -T0 -o "$backup_file" || exit_status=$?
+    paths_str=$(printf '%q ' "${include_paths[@]}")
+    # shellcheck disable=SC2029  # We want $use_sudo to expand on client side
+    ssh "$host" "eval \"$use_sudo tar $one_file_system -cvf - $paths_str\"" | zstd -T0 -o "$backup_file" || exit_status=$?
 else
-    ssh "$host" 'tar '"$one_file_system"' -cvf - '"$(printf ' --exclude=%q' "${exclude_paths[@]}")"' /' | zstd -T0 -o "$backup_file" || exit_status=$?
+    excludes_str=$(printf ' --exclude=%q' "${exclude_paths[@]}")
+    # shellcheck disable=SC2029  # We want $use_sudo to expand on client side
+    ssh "$host" "eval \"$use_sudo tar $one_file_system -cvf -$excludes_str /\"" | zstd -T0 -o "$backup_file" || exit_status=$?
 fi
 
 # Handle the exit status of tar

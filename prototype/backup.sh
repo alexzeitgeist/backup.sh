@@ -25,6 +25,8 @@ DEFAULT_ONE_FILE_SYSTEM="no"
 DEFAULT_SKIP_CHECKSUM="no"
 DEFAULT_CONTINUE_ON_CHANGE="no"
 DEFAULT_COMPAT_MODE="no"
+DEFAULT_SKIP_ROOT_CHECK="no"
+DEFAULT_VERIFY="no"
 
 CONFIG_FILE_USED=""
 
@@ -121,8 +123,9 @@ Key Options
   --skip-checksum, -s        skip SHA-256 calculation
   --continue-on-change, -c   do not abort when tar returns 1 (files changed)
   --skip-root-check, -n      assume remote tar can run without sudo/root
+  --no-skip-root-check       force the remote root check even if skipped by default
   --preview                  print the resolved plan then exit
-  --verify                   decompress the final archive (and decrypt if needed) to ensure readability
+  --verify / --no-verify     decompress (and decrypt) the archive post-run to confirm readability, or disable when defaulted on
   --ssh-option OPT           repeatable, pass raw option to ssh (e.g. "-p" "2222")
   --ssh-extra STRING         alias for --ssh-option
   --config FILE              explicit config file (sourced bash)
@@ -354,9 +357,9 @@ passphrase=""
 passphrase_file=""
 skip_checksum="${DEFAULT_SKIP_CHECKSUM:-no}"
 continue_on_change="${DEFAULT_CONTINUE_ON_CHANGE:-no}"
-skip_root_check="no"
+skip_root_check=$(normalize_bool "${DEFAULT_SKIP_ROOT_CHECK:-no}")
 preview="no"
-verify="no"
+verify=$(normalize_bool "${DEFAULT_VERIFY:-no}")
 compat_mode=$(normalize_bool "${DEFAULT_COMPAT_MODE:-no}")
 if [[ -n "${BACKUPSH_COMPAT:-}" ]]; then
   compat_mode=$(normalize_bool "${BACKUPSH_COMPAT:-}")
@@ -442,12 +445,20 @@ while [[ $# -gt 0 ]]; do
       skip_root_check="yes"
       shift 1
       ;;
+    --no-skip-root-check)
+      skip_root_check="no"
+      shift 1
+      ;;
     --preview)
       preview="yes"
       shift 1
       ;;
     --verify)
       verify="yes"
+      shift 1
+      ;;
+    --no-verify)
+      verify="no"
       shift 1
       ;;
     --compat)

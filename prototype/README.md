@@ -13,7 +13,7 @@
 5. **Verification Flag** – `--verify` optionally replays the resulting archive (decrypting if necessary) through `zstd` + `tar -t` so operators can confirm readability immediately after each run.
 
 ## Config Example
-See `prototype/config.example` for a drop-in file. Each variable matches the `DEFAULT_*` names in the script (including `DEFAULT_COMPAT_MODE`). Arrays let contributors express multiple include paths, exclude patterns, or SSH options cleanly.
+See `prototype/config.example` for a drop-in file. Each variable matches the `DEFAULT_*` names in the script (including `DEFAULT_COMPAT_MODE`). Arrays let contributors express multiple include paths, exclude patterns, or SSH options cleanly. Set `DEFAULT_SKIP_ROOT_CHECK="yes"` to silence the remote sudo probe or `DEFAULT_VERIFY="yes"` to run archive verification automatically; the CLI flags (`--no-skip-root-check`, `--no-verify`) still override per run.
 
 ## Migration Tips
 - Drop `prototype/backup.sh` next to the current script and run `./prototype/backup.sh --preview user@host` to confirm paths before touching the remote machine.

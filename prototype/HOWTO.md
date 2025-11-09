@@ -66,6 +66,7 @@ prototype/backup.sh --mode home --verify user@host
 - `DEFAULT_INCLUDE_PATHS`, `DEFAULT_EXCLUDE_PATTERNS`, `DEFAULT_OUTPUT_DIR`, `DEFAULT_LABEL`, and `DEFAULT_SSH_OPTIONS` remove the need for repetitive flags.
 - `DEFAULT_COMPAT_MODE="yes"` keeps positional paths behaving like the legacy script until you intentionally migrate.
 - Per-run overrides: `--config /path/to/file`, `BACKUPSH_CONFIG=/tmp/custom.conf`, or `BACKUPSH_COMPAT=1`.
+- Safety toggles: set `DEFAULT_SKIP_ROOT_CHECK="yes"` to silence the remote sudo probe or `DEFAULT_VERIFY="yes"` to run archive verification automatically; use `--no-skip-root-check` / `--no-verify` to override on specific runs.
 
 ## Options & Arguments
 - `user@host` *(required positional)* – Remote SSH target; the username determines whether sudo is needed.
@@ -83,9 +84,9 @@ prototype/backup.sh --mode home --verify user@host
 - `--passphrase-file FILE` – Read the passphrase from a file or stdin (`-`).
 - `--skip-checksum, -s` – Skip the SHA-256 calculation (report suggests how to run it later).
 - `--continue-on-change, -c` – Do not abort when `tar` returns exit code 1 because files changed mid-backup.
-- `--skip-root-check, -n` – Skip the remote sudo/root capability probe (use only when confident `tar` can run unprivileged).
+- `--skip-root-check, -n` – Skip the remote sudo/root capability probe (use only when confident `tar` can run unprivileged). Pass `--no-skip-root-check` to force the probe even if your config default skips it.
 - `--preview` – Print the resolved plan (host, includes/excludes, output file, encryption) and exit without touching the remote host.
-- `--verify` – After the backup completes, decompress (and decrypt if needed) the archive and list it with `tar -t` to confirm readability.
+- `--verify` – After the backup completes, decompress (and decrypt if needed) the archive and list it with `tar -t` to confirm readability. Use `--no-verify` to override a config that enables verification by default.
 - `--ssh-option TOKEN` – Repeatable; each invocation passes an additional token to the SSH command (e.g., `--ssh-option -p --ssh-option 2222`).
 - `--ssh-extra STRING` – Legacy string that is split on spaces and appended to the SSH command.
 - `--config FILE` – Source an explicit config file before parsing CLI arguments.
@@ -95,7 +96,7 @@ prototype/backup.sh --mode home --verify user@host
 ## Safety & Verification
 - **Root detection**: The script checks remote root access; add `--skip-root-check` (alias `-n`) only when you are certain `tar` can run without sudo.
 - **Preview + `--mode` sanity**: The script errors if you combine `--mode full` with includes, preventing partial backups by mistake.
-- **Checksums & verification**: By default a SHA-256 hash is generated. When skipping checksums (`--skip-checksum` / `-s`), the report clearly states how to compute one later. Add `--verify` to stream the final archive back through `zstd`/`tar -t` so you know it can be read before leaving the terminal.
+- **Checksums & verification**: By default a SHA-256 hash is generated. When skipping checksums (`--skip-checksum` / `-s`), the report clearly states how to compute one later. Add `--verify` (or set `DEFAULT_VERIFY="yes"`) to stream the final archive back through `zstd`/`tar -t`; use `--no-verify` when you need to override that behavior.
 - **Encryption**: `--recipient` (alias `-r`) enables recipient-based GPG; `--passphrase` (alias `-p`) or `--passphrase-file` handles symmetric mode. Passphrases read from files strip trailing newlines to match interactive entry.
 
 ## Compatibility Tips

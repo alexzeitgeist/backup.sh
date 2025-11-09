@@ -28,3 +28,5 @@ DEFAULT_SSH_OPTIONS=("-p" "2222" "-o" "ControlMaster auto" "-o" "ControlPersist 
 # Verification defaults
 DEFAULT_SKIP_CHECKSUM="no"
 DEFAULT_CONTINUE_ON_CHANGE="no"
+DEFAULT_SKIP_ROOT_CHECK="no"
+DEFAULT_VERIFY="no"

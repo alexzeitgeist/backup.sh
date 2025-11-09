@@ -348,15 +348,15 @@ fi
 load_config "$config_override"
 
 mode="${DEFAULT_MODE:-full}"
-one_file_system="${DEFAULT_ONE_FILE_SYSTEM:-no}"
+one_file_system=$(normalize_bool "${DEFAULT_ONE_FILE_SYSTEM:-no}")
 output_dir="${DEFAULT_OUTPUT_DIR:-$PWD}"
 label="${DEFAULT_LABEL:-}"
-encrypt="${DEFAULT_ENCRYPT:-no}"
+encrypt=$(normalize_bool "${DEFAULT_ENCRYPT:-no}")
 recipient="${DEFAULT_RECIPIENT:-}"
 passphrase=""
 passphrase_file=""
-skip_checksum="${DEFAULT_SKIP_CHECKSUM:-no}"
-continue_on_change="${DEFAULT_CONTINUE_ON_CHANGE:-no}"
+skip_checksum=$(normalize_bool "${DEFAULT_SKIP_CHECKSUM:-no}")
+continue_on_change=$(normalize_bool "${DEFAULT_CONTINUE_ON_CHANGE:-no}")
 skip_root_check=$(normalize_bool "${DEFAULT_SKIP_ROOT_CHECK:-no}")
 preview="no"
 verify=$(normalize_bool "${DEFAULT_VERIFY:-no}")

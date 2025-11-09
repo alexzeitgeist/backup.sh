@@ -1,0 +1,27 @@
+# Example config for prototype/backup.sh
+# Copy to ~/.config/backupsh/config (chmod 600) and adjust values.
+
+# Run home-mode by default; command line -m overrides.
+DEFAULT_MODE="home"
+
+# Default include paths when using include-only mode.
+DEFAULT_INCLUDE_PATHS=("/home/alex" "/etc/fstab")
+
+# Where to drop archives and reports.
+DEFAULT_OUTPUT_DIR="$HOME/backups"
+DEFAULT_LABEL="nightly"
+
+# Encryption
+DEFAULT_ENCRYPT="yes"
+DEFAULT_RECIPIENT="YOURKEYID"
+
+# Filesystem rules
+DEFAULT_ONE_FILE_SYSTEM="yes"
+DEFAULT_EXCLUDE_PATTERNS=("/dev/*" "/proc/*" "/sys/*" "/run/*" "/tmp/*" "/var/log/*")
+
+# SSH tuning: each array entry is a token.
+DEFAULT_SSH_OPTIONS=("-p" "2222" "-o" "ControlMaster auto" "-o" "ControlPersist 60s")
+
+# Verification defaults
+DEFAULT_SKIP_CHECKSUM="no"
+DEFAULT_CONTINUE_ON_CHANGE="no"

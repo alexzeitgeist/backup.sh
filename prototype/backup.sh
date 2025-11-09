@@ -108,25 +108,25 @@ Quick Start
   backup.sh --encrypt -r KEY host     # encrypted full backup
 
 Key Options
-  -m, --mode MODE            full | home | custom (defaults to config)
+  --mode MODE, -m            full | home | custom (defaults to config)
   --include PATH             repeatable path to include (implies include-only)
   --exclude PATH             repeatable path to exclude (for full/custom)
-  -i, --include-only         legacy alias to force include-only mode
+  --include-only, -i         legacy toggle to force include-only mode
   --output-dir DIR           directory for archives (default: config or cwd)
   --label LABEL              suffix for filenames (e.g. nightly)
-  -e, --encrypt              enable encryption (config can default to yes)
-  -r, --recipient KEY        GPG recipient; enables encryption automatically
-  -p, --passphrase PASS      symmetric encryption with given passphrase
+  --encrypt, -e              enable encryption (config can default to yes)
+  --recipient KEY, -r        GPG recipient; enables encryption automatically
+  --passphrase PASS, -p      symmetric encryption with given passphrase
   --passphrase-file FILE     read passphrase from file/stdin (use - for stdin)
-  -s, --skip-checksum        skip SHA-256 calculation
-  -c, --continue-on-change   do not abort when tar returns 1 (files changed)
-  -n, --skip-root-check      assume remote tar can run without sudo/root
+  --skip-checksum, -s        skip SHA-256 calculation
+  --continue-on-change, -c   do not abort when tar returns 1 (files changed)
+  --skip-root-check, -n      assume remote tar can run without sudo/root
   --preview                  print the resolved plan then exit
   --ssh-option OPT           repeatable, pass raw option to ssh (e.g. "-p" "2222")
   --ssh-extra STRING         alias for --ssh-option
   --config FILE              explicit config file (sourced bash)
   --compat / --no-compat     toggle legacy positional-path semantics (or set BACKUPSH_COMPAT)
-  -h, --help                 show extended help
+  --help, -h                 show extended help
 
 Config File (~/.config/backupsh/config)
   DEFAULT_MODE="home"
@@ -145,7 +145,7 @@ Plan Summary
 Compatibility Notes
   Positional paths default to "include-only" mode. Enable --compat (or set
   BACKUPSH_COMPAT=1) to restore the legacy behavior where positional paths become
-  excludes unless -i is provided. When --compat is on, the legacy "-f" marker can
+  excludes unless --include-only (-i) is provided. When --compat is on, the legacy "-f" marker can
   precede a path to treat it as a single file rather than appending /*.
 EOF
 }

@@ -14,7 +14,7 @@ This guide walks through the refreshed `prototype/backup.sh` workflow so you can
 prototype/backup.sh --preview user@host
 
 # Encrypted full backup (defaults plus config)
-prototype/backup.sh --encrypt -r KEYID user@host
+prototype/backup.sh --encrypt --recipient KEYID user@host
 
 # Home-mode backup with explicit label
 prototype/backup.sh --mode home --label nightly user@host
@@ -24,13 +24,13 @@ Use `--compat` (or `BACKUPSH_COMPAT=1`) if you need the legacy behavior where po
 ## Common Command Patterns
 ```bash
 # Custom include-only run for /etc and /var/www with encryption + checksum
-prototype/backup.sh -i --include /etc --include /var/www --encrypt -r OPS user@host
+prototype/backup.sh --include-only --include /etc --include /var/www --encrypt --recipient OPS user@host
 
-# Legacy-style excludes (compat mode) with literal file flag
+# Legacy-style excludes (compat mode) with the legacy literal marker (-f)
 prototype/backup.sh --compat user@host -f /etc/fstab /home /var/log
 
 # Use a specific config file and skip checksum generation
-prototype/backup.sh --config ~/.config/backupsh/profiles/db.conf -s user@dbhost
+prototype/backup.sh --config ~/.config/backupsh/profiles/db.conf --skip-checksum user@dbhost
 
 # Provide SSH port and control options via repeated --ssh-option
 prototype/backup.sh --ssh-option -p --ssh-option 2222 --ssh-option -o --ssh-option "StrictHostKeyChecking no" user@host
@@ -42,7 +42,7 @@ prototype/backup.sh --mode custom --include /srv/data --exclude /srv/data/tmp --
 prototype/backup.sh --passphrase-file ~/.secrets/backup.pass user@host /home/alex /srv/projects
 
 # Skip remote root probing when you know tar can run as the SSH user
-prototype/backup.sh -n --mode home user@host
+prototype/backup.sh --skip-root-check --mode home user@host
 
 # Run with explicit output directory and label for staging
 prototype/backup.sh --output-dir /mnt/backups --label staging user@host
@@ -67,35 +67,35 @@ prototype/backup.sh --compat --preview user@host /var/www /etc
 ## Options & Arguments
 - `user@host` *(required positional)* – Remote SSH target; the username determines whether sudo is needed.
 - `paths ...` *(optional positional)* – Additional paths. By default they trigger include-only mode. With `--compat` (or `DEFAULT_COMPAT_MODE="yes"`), they behave like the legacy excludes list, and `-f` marks the next path as a literal file.
-- `-m, --mode {full|home|custom}` – Preset include/exclude plans; `custom` requires explicit `--include`/`--exclude`.
+- `--mode, -m {full|home|custom}` – Preset include/exclude plans; `custom` requires explicit `--include`/`--exclude`.
 - `--include PATH` – Repeatable include list; automatically enables include-only mode.
 - `--exclude PATH` – Repeatable exclude list used by `full`/`custom` modes.
-- `-i, --include-only` – Legacy toggle forcing include-only behavior even without positional paths.
-- `-x, --one-file-system` – Passes `--one-file-system` to `tar` so the backup doesn’t cross mountpoints.
+- `--include-only, -i` – Legacy toggle forcing include-only behavior even without positional paths.
+- `--one-file-system, -x` – Passes `--one-file-system` to `tar` so the backup doesn’t cross mountpoints.
 - `--output-dir DIR` – Where archives and reports are written (defaults to config or current directory).
 - `--label LABEL` – Appended to the archive filename (e.g., `nightly`, `pre-upgrade`).
-- `-e, --encrypt` – Enables GPG encryption; also implied by `-r/--recipient` or `-p/--passphrase`.
-- `-r, --recipient KEYID` – Recipient-based encryption (recommended); fails fast if the public key is missing.
-- `-p, --passphrase PASS` – Symmetric encryption using the supplied passphrase.
+- `--encrypt, -e` – Enables GPG encryption; also implied by `--recipient` or `--passphrase`.
+- `--recipient, -r KEYID` – Recipient-based encryption (recommended); fails fast if the public key is missing.
+- `--passphrase, -p PASS` – Symmetric encryption using the supplied passphrase.
 - `--passphrase-file FILE` – Read the passphrase from a file or stdin (`-`).
-- `-s, --skip-checksum` – Skip the SHA-256 calculation (report suggests how to run it later).
-- `-c, --continue-on-change` – Do not abort when `tar` returns exit code 1 because files changed mid-backup.
-- `-n, --skip-root-check` – Skip the remote sudo/root capability probe (use only when confident `tar` can run unprivileged).
+- `--skip-checksum, -s` – Skip the SHA-256 calculation (report suggests how to run it later).
+- `--continue-on-change, -c` – Do not abort when `tar` returns exit code 1 because files changed mid-backup.
+- `--skip-root-check, -n` – Skip the remote sudo/root capability probe (use only when confident `tar` can run unprivileged).
 - `--preview` – Print the resolved plan (host, includes/excludes, output file, encryption) and exit without touching the remote host.
 - `--ssh-option TOKEN` – Repeatable; each invocation passes an additional token to the SSH command (e.g., `--ssh-option -p --ssh-option 2222`).
 - `--ssh-extra STRING` – Legacy string that is split on spaces and appended to the SSH command.
 - `--config FILE` – Source an explicit config file before parsing CLI arguments.
-- `--compat` / `--no-compat` – Toggle legacy positional-path semantics for the current run (environment variable `BACKUPSH_COMPAT` mirrors this).
-- `-h, --help` – Display the built-in usage guide.
+- `--compat / --no-compat` – Toggle legacy positional-path semantics for the current run (environment variable `BACKUPSH_COMPAT` mirrors this).
+- `--help, -h` – Display the built-in usage guide.
 
 ## Safety & Verification
-- **Root detection**: The script checks remote root access; add `-n/--skip-root-check` only when you are certain `tar` can run without sudo.
+- **Root detection**: The script checks remote root access; add `--skip-root-check` (alias `-n`) only when you are certain `tar` can run without sudo.
 - **Preview + `--mode` sanity**: The script errors if you combine `--mode full` with includes, preventing partial backups by mistake.
-- **Checksums**: By default a SHA-256 hash is generated. When skipping checksums (`-s`), the report clearly states how to compute one later.
-- **Encryption**: `-r/--recipient` enables recipient-based GPG; `-p/--passphrase` or `--passphrase-file` handles symmetric mode. Passphrases read from files strip trailing newlines to match interactive entry.
+- **Checksums**: By default a SHA-256 hash is generated. When skipping checksums (`--skip-checksum` / `-s`), the report clearly states how to compute one later.
+- **Encryption**: `--recipient` (alias `-r`) enables recipient-based GPG; `--passphrase` (alias `-p`) or `--passphrase-file` handles symmetric mode. Passphrases read from files strip trailing newlines to match interactive entry.
 
 ## Compatibility Tips
-- `-i/--include-only` mirrors the old “only backup these paths” switch.
+- `--include-only` (alias `-i`) mirrors the old “only backup these paths” switch.
 - `-f` (when `--compat` or `DEFAULT_COMPAT_MODE="yes"`) treats the next positional path as a literal file instead of appending `/*`.
 - Use `--no-compat` (or `BACKUPSH_COMPAT=0`) to return to the modern include-only default once scripts are updated.
 

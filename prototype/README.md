@@ -7,7 +7,7 @@
 
 ## Key Changes
 1. **Config Loader** – Sources the first available file from `--config`, `$BACKUPSH_CONFIG`, `$XDG_CONFIG_HOME/backupsh/config`, `~/.config/backupsh/config`, or `~/.backupshrc`. Any variable defined there (e.g., `DEFAULT_INCLUDE_PATHS`, `DEFAULT_SSH_OPTIONS`) becomes the baseline, but CLI flags still override per-run. This keeps commands short for habitual backups without hiding advanced switches.
-2. **Modes + Includes** – Added a `--mode` flag (`full`, `home`, `custom`) plus clearer `--include/--exclude` semantics. Positional paths default to include-only (just like `-i` used to do), but `--compat` or `BACKUPSH_COMPAT=1` restores the legacy behavior where they become excludes and `-f` marks literal files.
+2. **Modes + Includes** – Added a `--mode` flag (`full`, `home`, `custom`) plus clearer `--include/--exclude` semantics. Positional paths default to include-only (the same outcome as `--include-only`, which still has a `-i` alias), but `--compat` or `BACKUPSH_COMPAT=1` restores the legacy behavior where they become excludes and `-f` marks literal files.
 3. **Plan Summary + Preview** – Every run prints host, mode, include/exclude sets, encryption status, and output path before work begins. `--preview` surfaces the same information without touching the remote host, acting as a dry-run sanity check.
 4. **SSH Options as Arrays** – Instead of free-form strings, SSH tweaks live in `DEFAULT_SSH_OPTIONS` or repeated `--ssh-option` flags, so quoting is explicit and safer. The legacy `--ssh-extra` flag maps to the new system for familiarity.
 
@@ -29,7 +29,7 @@ See `prototype/config.example` for a drop-in file. Each variable matches the `DE
 - When encryption is enabled, the backup output filename gains `.gpg` just like today, so downstream tooling (restore, checksum compare) stays compatible.
 
 ## Legacy Compatibility Cheatsheet
-- `-i` (or `--include-only`) mirrors the old toggle that said “treat following paths as the include set.”
+- `--include-only` (alias `-i`) mirrors the old toggle that said “treat following paths as the include set.”
 - `--compat` flips positional paths back to excludes and re-enables the legacy `-f` marker for literal paths. `--no-compat` or `BACKUPSH_COMPAT=0` switches to the new include-centric UX.
 - Set `DEFAULT_COMPAT_MODE="yes"` inside the config for hosts that must stay on the legacy behavior until their automation is updated.
 

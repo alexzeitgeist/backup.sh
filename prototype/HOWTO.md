@@ -49,6 +49,9 @@ prototype/backup.sh --output-dir /mnt/backups --label staging user@host
 
 # Combine preview + compat to double-check legacy automation before execution
 prototype/backup.sh --compat --preview user@host /var/www /etc
+
+# Verify archive readability right after creation
+prototype/backup.sh --mode home --verify user@host
 ```
 
 ## Step-by-Step Workflow
@@ -56,8 +59,8 @@ prototype/backup.sh --compat --preview user@host /var/www /etc
 2. **Create a config** – Copy `prototype/config.example` to `~/.config/backupsh/config`, tighten permissions (`chmod 600`), and edit any `DEFAULT_*` values you want. CLI flags always override config defaults.
 3. **Choose a mode** – `full` (entire filesystem with default excludes), `home` (include `/home` by default), or `custom` (requires `--include`/`--exclude`). Positional paths automatically switch to include-only mode unless `--compat` is enabled.
 4. **Preview before running** – `--preview` prints the resolved host, includes/excludes, encryption settings, output path, and config file in use. This is safe to run repeatedly.
-5. **Run the backup** – The script handles SSH sudo detection, streams `tar` output through `zstd`, and optionally encrypts with GPG (recipient or passphrase).
-6. **Review the report** – Each backup writes `<archive>.txt` with host, mode, include/exclude sets, encryption status, checksum, and an explanation if checksum generation was skipped. Follow the report’s `Checksum note` to re-run `sha256sum` after copying archives.
+5. **Run the backup** – The script handles SSH sudo detection, streams `tar` output through `zstd`, and optionally encrypts with GPG (recipient or passphrase). Add `--verify` when you want the script to immediately decompress (and decrypt) the finished archive to confirm it is readable.
+6. **Review the report** – Each backup writes `<archive>.txt` with host, mode, include/exclude sets, encryption status, checksum, verification result, and an explanation if checksum generation was skipped. Follow the report’s `Checksum note` to re-run `sha256sum` after copying archives.
 
 ## Configuration Cheatsheet
 - `DEFAULT_INCLUDE_PATHS`, `DEFAULT_EXCLUDE_PATTERNS`, `DEFAULT_OUTPUT_DIR`, `DEFAULT_LABEL`, and `DEFAULT_SSH_OPTIONS` remove the need for repetitive flags.
@@ -82,6 +85,7 @@ prototype/backup.sh --compat --preview user@host /var/www /etc
 - `--continue-on-change, -c` – Do not abort when `tar` returns exit code 1 because files changed mid-backup.
 - `--skip-root-check, -n` – Skip the remote sudo/root capability probe (use only when confident `tar` can run unprivileged).
 - `--preview` – Print the resolved plan (host, includes/excludes, output file, encryption) and exit without touching the remote host.
+- `--verify` – After the backup completes, decompress (and decrypt if needed) the archive and list it with `tar -t` to confirm readability.
 - `--ssh-option TOKEN` – Repeatable; each invocation passes an additional token to the SSH command (e.g., `--ssh-option -p --ssh-option 2222`).
 - `--ssh-extra STRING` – Legacy string that is split on spaces and appended to the SSH command.
 - `--config FILE` – Source an explicit config file before parsing CLI arguments.
@@ -91,7 +95,7 @@ prototype/backup.sh --compat --preview user@host /var/www /etc
 ## Safety & Verification
 - **Root detection**: The script checks remote root access; add `--skip-root-check` (alias `-n`) only when you are certain `tar` can run without sudo.
 - **Preview + `--mode` sanity**: The script errors if you combine `--mode full` with includes, preventing partial backups by mistake.
-- **Checksums**: By default a SHA-256 hash is generated. When skipping checksums (`--skip-checksum` / `-s`), the report clearly states how to compute one later.
+- **Checksums & verification**: By default a SHA-256 hash is generated. When skipping checksums (`--skip-checksum` / `-s`), the report clearly states how to compute one later. Add `--verify` to stream the final archive back through `zstd`/`tar -t` so you know it can be read before leaving the terminal.
 - **Encryption**: `--recipient` (alias `-r`) enables recipient-based GPG; `--passphrase` (alias `-p`) or `--passphrase-file` handles symmetric mode. Passphrases read from files strip trailing newlines to match interactive entry.
 
 ## Compatibility Tips

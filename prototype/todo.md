@@ -34,7 +34,7 @@
 
 ## Optional Enhancements (Nice‑to‑Have)
 - [ ] Profiles: Allow `~/.config/backupsh/profiles.d/*.conf` and `--profile NAME` to source one.
-- [ ] `--verify` flag: re‑read the just‑created archive to confirm readability and checksum.
+- [x] `--verify` flag: re‑read the just‑created archive to confirm readability and checksum.
 - [ ] Disk‑space precheck in `--preview` (local and remote optional).
 - [ ] `--output-dir` retention: `--keep N` prune older backups on success.
 

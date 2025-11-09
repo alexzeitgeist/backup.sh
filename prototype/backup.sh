@@ -122,6 +122,7 @@ Key Options
   --continue-on-change, -c   do not abort when tar returns 1 (files changed)
   --skip-root-check, -n      assume remote tar can run without sudo/root
   --preview                  print the resolved plan then exit
+  --verify                   decompress the final archive (and decrypt if needed) to ensure readability
   --ssh-option OPT           repeatable, pass raw option to ssh (e.g. "-p" "2222")
   --ssh-extra STRING         alias for --ssh-option
   --config FILE              explicit config file (sourced bash)
@@ -226,6 +227,25 @@ run_remote_command() {
   local command_string
   command_string=$(printf '%q ' "$@")
   "${ssh_cmd[@]}" "$command_string"
+}
+
+verify_archive() {
+  local file="$1"
+  if [[ "$encrypt" == "yes" ]]; then
+    if [[ -n "$recipient" ]]; then
+      gpg --batch --quiet --decrypt "$file" | zstd -d --stdout | tar -tf - >/dev/null
+    else
+      if [[ -z "$passphrase" ]]; then
+        die "--verify with symmetric encryption requires --passphrase or --passphrase-file"
+      fi
+      printf '%s' "$passphrase" \
+        | gpg --batch --quiet --yes --passphrase-fd 0 --decrypt "$file" \
+        | zstd -d --stdout \
+        | tar -tf - >/dev/null
+    fi
+  else
+    zstd -d --stdout "$file" | tar -tf - >/dev/null
+  fi
 }
 
 apply_positional_args() {
@@ -336,6 +356,7 @@ skip_checksum="${DEFAULT_SKIP_CHECKSUM:-no}"
 continue_on_change="${DEFAULT_CONTINUE_ON_CHANGE:-no}"
 skip_root_check="no"
 preview="no"
+verify="no"
 compat_mode=$(normalize_bool "${DEFAULT_COMPAT_MODE:-no}")
 if [[ -n "${BACKUPSH_COMPAT:-}" ]]; then
   compat_mode=$(normalize_bool "${BACKUPSH_COMPAT:-}")
@@ -423,6 +444,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --preview)
       preview="yes"
+      shift 1
+      ;;
+    --verify)
+      verify="yes"
       shift 1
       ;;
     --compat)
@@ -632,6 +657,16 @@ if [[ "$encrypt" == "yes" ]]; then
   fi
 fi
 
+verify_status="skipped (--verify not set)"
+if [[ "$verify" == "yes" ]]; then
+  log "Verifying archive integrity..."
+  if verify_archive "$backup_file"; then
+    verify_status="passed"
+  else
+    die "Verification failed for $backup_file"
+  fi
+fi
+
 backup_file_size=$(du -sh "$backup_file" | cut -f1)
 checksum="skipped (--skip-checksum)"
 checksum_note="Skipped via --skip-checksum; run: sha256sum \"$backup_file\" > \"${backup_file}.sha256\" when ready."
@@ -657,6 +692,7 @@ Elapsed seconds: $elapsed
 Checksum:        $checksum
 Checksum note:   $checksum_note
 Config file:     ${CONFIG_FILE_USED:-none}
+Verification:    $verify_status
 EOF
 
 trap - INT TERM

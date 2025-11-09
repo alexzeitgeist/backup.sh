@@ -10,6 +10,7 @@
 2. **Modes + Includes** – Added a `--mode` flag (`full`, `home`, `custom`) plus clearer `--include/--exclude` semantics. Positional paths default to include-only (the same outcome as `--include-only`, which still has a `-i` alias), but `--compat` or `BACKUPSH_COMPAT=1` restores the legacy behavior where they become excludes and `-f` marks literal files.
 3. **Plan Summary + Preview** – Every run prints host, mode, include/exclude sets, encryption status, and output path before work begins. `--preview` surfaces the same information without touching the remote host, acting as a dry-run sanity check.
 4. **SSH Options as Arrays** – Instead of free-form strings, SSH tweaks live in `DEFAULT_SSH_OPTIONS` or repeated `--ssh-option` flags, so quoting is explicit and safer. The legacy `--ssh-extra` flag maps to the new system for familiarity.
+5. **Verification Flag** – `--verify` optionally replays the resulting archive (decrypting if necessary) through `zstd` + `tar -t` so operators can confirm readability immediately after each run.
 
 ## Config Example
 See `prototype/config.example` for a drop-in file. Each variable matches the `DEFAULT_*` names in the script (including `DEFAULT_COMPAT_MODE`). Arrays let contributors express multiple include paths, exclude patterns, or SSH options cleanly.

@@ -2,7 +2,7 @@
 
 ## Summary Verdict
 - Robustness: Significantly improved vs. original. Safer SSH command construction (no remote eval), config permission checks, stronger validation, and safer passphrase handling.
-- Backward‑compatibility: Partial. A few CLI semantics differ (positional paths, missing `-i`, missing `-f`). Users relying on old patterns may be surprised.
+- Backward‑compatibility: Partial. Positional paths default to include-only unless `--compat`/`DEFAULT_COMPAT_MODE` is set, so legacy automation must opt in deliberately.
 - Everyday usability: Better. Quick Start examples, `--preview` + pre‑flight summary, and config defaults reduce cognitive load for routine backups.
 
 ## What’s More Robust Now
@@ -13,9 +13,9 @@
 - Array‑based SSH options (`--ssh-option`/`--ssh-extra`) reduce quoting bugs.
 
 ## Where Compatibility Diverges (Risks)
-- Positional paths: Original interpreted extra paths as excludes (unless `-i`). Prototype interprets them as includes (include‑only). Breaking change for some users.
-- Flag gaps: Original had `-i` (include‑only) and `-f` (treat next path as a file); prototype currently lacks both.
-- Minor rename: Continue behavior is exposed as `--continue-on-change` (behavior equivalent, naming differs).
+- Positional paths default to include-only unless `--compat` (or `DEFAULT_COMPAT_MODE="yes"`) is set, so automation relying on legacy excludes must opt in deliberately.
+- Legacy `-i`/`-f` flags exist again, but teams should confirm scripts still pass the right tokens (especially when mixing positional args and `--include`).
+- Minor rename: Continue behavior remains `--continue-on-change` (behavior equivalent, naming differs).
 
 ## Usability Impact (Day‑to‑Day)
 - First‑run simplicity: Helpful Quick Start and embedded config example; less time reading terse short‑flag docs.
@@ -24,13 +24,13 @@
 - Small fix recommended: In `--mode home`, include `/home` (not `/home/*`) so recursive tar works without relying on shell glob expansion.
 
 ## High‑Priority Follow‑Ups (Back‑Compat + Polish)
-- [ ] Add `-i` as an alias to `--include-only` (no behavior change, just compatibility).
-- [ ] Reintroduce `-f` (one‑shot toggle) so the next path is treated as an exact file path for exclude in `full/custom` modes. Keep `--exclude` as the modern explicit form.
-- [ ] Add `--compat` (or env `BACKUPSH_COMPAT=1`) to restore original semantics: positional paths → excludes unless include‑only is set.
-- [ ] Change home mode default include to `/home` (not `/home/*`).
-- [ ] Align help/README/config.example with the above (document `-i`, `-f`, and `--compat`).
-- [ ] Extend `report` to state why checksum is skipped (already done) and optionally print verification advice.
-- [ ] Add simple Makefile targets for the prototype (`fmt`, `lint`, `check`, `ci`) mirroring the repo root.
+- [x] Add `-i` as an alias to `--include-only` (no behavior change, just compatibility).
+- [x] Reintroduce `-f` (one‑shot toggle) so the next path is treated as an exact file path for exclude in `full/custom` modes. Keep `--exclude` as the modern explicit form.
+- [x] Add `--compat` (or env `BACKUPSH_COMPAT=1`) to restore original semantics: positional paths → excludes unless include‑only is set.
+- [x] Change home mode default include to `/home` (not `/home/*`).
+- [x] Align help/README/config.example with the above (document `-i`, `-f`, and `--compat`).
+- [x] Extend `report` to state why checksum is skipped (already done) and optionally print verification advice.
+- [x] Add simple Makefile targets for the prototype (`fmt`, `lint`, `check`, `ci`) mirroring the repo root.
 
 ## Optional Enhancements (Nice‑to‑Have)
 - [ ] Profiles: Allow `~/.config/backupsh/profiles.d/*.conf` and `--profile NAME` to source one.

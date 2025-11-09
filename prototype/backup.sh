@@ -24,6 +24,7 @@ DEFAULT_ENCRYPT="no"
 DEFAULT_ONE_FILE_SYSTEM="no"
 DEFAULT_SKIP_CHECKSUM="no"
 DEFAULT_CONTINUE_ON_CHANGE="no"
+DEFAULT_COMPAT_MODE="no"
 
 CONFIG_FILE_USED=""
 
@@ -34,6 +35,18 @@ log() {
 die() {
   printf 'Error: %s\n' "$*" >&2
   exit 1
+}
+
+normalize_bool() {
+  local value="${1:-}"
+  case "${value,,}" in
+    yes | true | 1 | on)
+      printf 'yes\n'
+      ;;
+    *)
+      printf 'no\n'
+      ;;
+  esac
 }
 
 ensure_secure_config() {
@@ -49,10 +62,10 @@ ensure_secure_config() {
   local len=${#perm}
   local group=""
   local other=""
-  if (( len >= 2 )); then
+  if ((len >= 2)); then
     group=${perm:len-2:1}
   fi
-  if (( len >= 1 )); then
+  if ((len >= 1)); then
     other=${perm:len-1:1}
   fi
   if [[ $group =~ [2367] || $other =~ [2367] ]]; then
@@ -98,6 +111,7 @@ Key Options
   -m, --mode MODE            full | home | custom (defaults to config)
   --include PATH             repeatable path to include (implies include-only)
   --exclude PATH             repeatable path to exclude (for full/custom)
+  -i, --include-only         legacy alias to force include-only mode
   --output-dir DIR           directory for archives (default: config or cwd)
   --label LABEL              suffix for filenames (e.g. nightly)
   -e, --encrypt              enable encryption (config can default to yes)
@@ -111,6 +125,7 @@ Key Options
   --ssh-option OPT           repeatable, pass raw option to ssh (e.g. "-p" "2222")
   --ssh-extra STRING         alias for --ssh-option
   --config FILE              explicit config file (sourced bash)
+  --compat / --no-compat     toggle legacy positional-path semantics (or set BACKUPSH_COMPAT)
   -h, --help                 show extended help
 
 Config File (~/.config/backupsh/config)
@@ -126,6 +141,12 @@ Config File (~/.config/backupsh/config)
 Plan Summary
   The script prints a pre-flight summary (host, mode, includes/excludes, encryption,
   output file) before running tar. Use --preview to view this summary without writing.
+
+Compatibility Notes
+  Positional paths default to "include-only" mode. Enable --compat (or set
+  BACKUPSH_COMPAT=1) to restore the legacy behavior where positional paths become
+  excludes unless -i is provided. When --compat is on, the legacy "-f" marker can
+  precede a path to treat it as a single file rather than appending /*.
 EOF
 }
 
@@ -207,6 +228,64 @@ run_remote_command() {
   "${ssh_cmd[@]}" "$command_string"
 }
 
+apply_positional_args() {
+  local token path
+  if [[ ${#positional_args[@]} -eq 0 ]]; then
+    return
+  fi
+
+  if [[ "$include_only" == "yes" ]]; then
+    local added="no"
+    for token in "${positional_args[@]}"; do
+      if [[ "$token" == "-f" ]]; then
+        continue
+      fi
+      include_paths+=("${token%/}")
+      added="yes"
+    done
+    if [[ "$added" == "yes" ]]; then
+      include_paths_specified="yes"
+    fi
+    return
+  fi
+
+  if [[ "$compat_mode" == "yes" ]]; then
+    local next_literal="no"
+    for token in "${positional_args[@]}"; do
+      if [[ "$token" == "-f" ]]; then
+        next_literal="yes"
+        continue
+      fi
+      path="${token%/}"
+      if [[ -z "$path" ]]; then
+        continue
+      fi
+      if [[ "$next_literal" == "yes" ]]; then
+        next_literal="no"
+      else
+        if [[ "$path" != *'*'* ]]; then
+          path+="/*"
+        fi
+      fi
+      exclude_paths+=("$path")
+    done
+    return
+  fi
+
+  local added="no"
+  for token in "${positional_args[@]}"; do
+    if [[ "$token" == "-f" ]]; then
+      die "-f is only supported with --compat or BACKUPSH_COMPAT=1"
+    fi
+    include_paths+=("${token%/}")
+    added="yes"
+  done
+  if [[ "$added" == "yes" ]]; then
+    include_paths_specified="yes"
+    include_only="yes"
+  fi
+}
+
 # -----------------
 # Argument handling
 # -----------------
@@ -215,12 +294,12 @@ orig_args=("$@")
 config_override=""
 filtered_args=()
 i=0
-while (( i < ${#orig_args[@]} )); do
+while ((i < ${#orig_args[@]})); do
   token="${orig_args[i]}"
   case "$token" in
     --config)
-      (( i++ ))
-      (( i < ${#orig_args[@]} )) || die "--config requires a value"
+      ((i++))
+      ((i < ${#orig_args[@]})) || die "--config requires a value"
       config_override="${orig_args[i]}"
       ;;
     --config=*)
@@ -234,7 +313,7 @@ while (( i < ${#orig_args[@]} )); do
       filtered_args+=("$token")
       ;;
   esac
-  (( i++ ))
+  ((i++))
 done
 
 if [[ ${#filtered_args[@]} -gt 0 ]]; then
@@ -257,6 +336,10 @@ skip_checksum="${DEFAULT_SKIP_CHECKSUM:-no}"
 continue_on_change="${DEFAULT_CONTINUE_ON_CHANGE:-no}"
 skip_root_check="no"
 preview="no"
+compat_mode=$(normalize_bool "${DEFAULT_COMPAT_MODE:-no}")
+if [[ -n "${BACKUPSH_COMPAT:-}" ]]; then
+  compat_mode=$(normalize_bool "${BACKUPSH_COMPAT:-}")
+fi
 declare -a include_paths=()
 if [[ ${#DEFAULT_INCLUDE_PATHS[@]} -gt 0 ]]; then
   include_paths=("${DEFAULT_INCLUDE_PATHS[@]}")
@@ -267,7 +350,7 @@ if [[ ${#DEFAULT_EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
 fi
 include_only="no"
 include_paths_specified="no"
-declare -a positional_includes=()
+declare -a positional_args=()
 declare -a ssh_options=()
 if [[ ${#DEFAULT_SSH_OPTIONS[@]} -gt 0 ]]; then
   ssh_options=("${DEFAULT_SSH_OPTIONS[@]}")
@@ -275,7 +358,7 @@ fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -m|--mode)
+    -m | --mode)
       mode="$2"
       shift 2
       ;;
@@ -298,16 +381,16 @@ while [[ $# -gt 0 ]]; do
       label="$2"
       shift 2
       ;;
-    -e|--encrypt)
+    -e | --encrypt)
       encrypt="yes"
       shift 1
       ;;
-    -r|--recipient)
+    -r | --recipient)
       recipient="$2"
       encrypt="yes"
       shift 2
       ;;
-    -p|--passphrase)
+    -p | --passphrase)
       passphrase="$2"
       encrypt="yes"
       shift 2
@@ -317,28 +400,37 @@ while [[ $# -gt 0 ]]; do
       encrypt="yes"
       shift 2
       ;;
-    --include-only)
+    -i | --include-only)
       include_only="yes"
+      include_paths_specified="yes"
       shift 1
       ;;
-    -x|--one-file-system)
+    -x | --one-file-system)
       one_file_system="yes"
       shift 1
       ;;
-    -c|--continue-on-change)
+    -c | --continue-on-change)
       continue_on_change="yes"
       shift 1
       ;;
-    -s|--skip-checksum)
+    -s | --skip-checksum)
       skip_checksum="yes"
       shift 1
       ;;
-    -n|--skip-root-check)
+    -n | --skip-root-check)
       skip_root_check="yes"
       shift 1
       ;;
     --preview)
       preview="yes"
+      shift 1
+      ;;
+    --compat)
+      compat_mode="yes"
+      shift 1
+      ;;
+    --no-compat)
+      compat_mode="no"
       shift 1
       ;;
     --ssh-option)
@@ -356,7 +448,7 @@ while [[ $# -gt 0 ]]; do
       ssh_options+=("${extra_parts[@]}")
       shift 2
       ;;
-    -h|--help)
+    -h | --help)
       show_help
       exit 0
       ;;
@@ -366,23 +458,24 @@ while [[ $# -gt 0 ]]; do
         if [[ -z "${host:-}" ]]; then
           host="$1"
         else
-          positional_includes+=("${1%/}")
-          include_paths_specified="yes"
-          include_only="yes"
+          positional_args+=("$1")
         fi
         shift
       done
       ;;
-    -* )
+    -*)
+      if [[ -n "${host:-}" ]]; then
+        positional_args+=("$1")
+        shift 1
+        continue
+      fi
       die "Unknown option $1"
       ;;
     *)
       if [[ -z "${host:-}" ]]; then
         host="$1"
       else
-        positional_includes+=("${1%/}")
-        include_paths_specified="yes"
-        include_only="yes"
+        positional_args+=("$1")
       fi
       shift 1
       ;;
@@ -393,9 +486,7 @@ if [[ -z "${host:-}" ]]; then
   die "Specify remote host (user@host)"
 fi
 
-if [[ ${#positional_includes[@]} -gt 0 ]]; then
-  include_paths+=("${positional_includes[@]}")
-fi
+apply_positional_args
 
 case "$mode" in
   full)
@@ -407,7 +498,7 @@ case "$mode" in
   home)
     include_only="yes"
     if [[ ${#include_paths[@]} -eq 0 ]]; then
-      include_paths=("/home/*")
+      include_paths=("/home")
     fi
     ;;
   custom)
@@ -543,10 +634,12 @@ fi
 
 backup_file_size=$(du -sh "$backup_file" | cut -f1)
 checksum="skipped (--skip-checksum)"
+checksum_note="Skipped via --skip-checksum; run: sha256sum \"$backup_file\" > \"${backup_file}.sha256\" when ready."
 if [[ "$skip_checksum" != "yes" ]]; then
   checksum=$(sha256sum "$backup_file" | cut -d' ' -f1)
+  checksum_note="Re-run sha256sum \"$backup_file\" after copying to verify integrity."
 fi
-elapsed=$(( $(date +%s) - start ))
+elapsed=$(($(date +%s) - start))
 
 report_file="${backup_file%.*}.txt"
 cat >"$report_file" <<EOF
@@ -562,6 +655,7 @@ Output file:     $backup_file
 File size:       $backup_file_size
 Elapsed seconds: $elapsed
 Checksum:        $checksum
+Checksum note:   $checksum_note
 Config file:     ${CONFIG_FILE_USED:-none}
 EOF
 

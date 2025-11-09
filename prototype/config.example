@@ -4,6 +4,9 @@
 # Run home-mode by default; command line -m overrides.
 DEFAULT_MODE="home"
 
+# Legacy positional-path behavior ("yes" keeps treating them as excludes).
+DEFAULT_COMPAT_MODE="no"
+
 # Default include paths when using include-only mode.
 DEFAULT_INCLUDE_PATHS=("/home/alex" "/etc/fstab")
 

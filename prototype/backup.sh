@@ -563,7 +563,7 @@ fi
 remote_host="$host"
 remote_name="${host#*@}"
 timestamp="$(date +%Y%m%d-%H%M%S)"
-base_name="${remote_name}-${timestamp}"
+base_name="${remote_name}-backup-${timestamp}"
 if [[ -n "$label" ]]; then
   base_name+="-${label}"
 fi

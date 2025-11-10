@@ -684,7 +684,7 @@ if [[ "$verify" == "yes" ]]; then
 fi
 
 backup_file_size=$(du -sh "$backup_file" | cut -f1)
-checksum="skipped (--skip-checksum)"
+checksum=""
 checksum_note="Skipped via --skip-checksum; run: sha256sum \"$backup_file\" > \"${backup_file}.sha256\" when ready."
 if [[ "$skip_checksum" != "yes" ]]; then
   checksum=$(sha256sum "$backup_file" | cut -d' ' -f1)
@@ -705,7 +705,7 @@ Recipient:       $recipient
 Output file:     $backup_file
 File size:       $backup_file_size
 Elapsed seconds: $elapsed
-SHA256 Checksum: $checksum
+${checksum:+SHA256 Checksum: $checksum}
 Checksum note:   $checksum_note
 Config file:     ${CONFIG_FILE_USED:-none}
 Verification:    $verify_status

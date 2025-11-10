@@ -700,7 +700,7 @@ Recipient:       $recipient
 Output file:     $backup_file
 File size:       $backup_file_size
 Elapsed seconds: $elapsed
-Checksum:        $checksum
+SHA256 Checksum: $checksum
 Checksum note:   $checksum_note
 Config file:     ${CONFIG_FILE_USED:-none}
 Verification:    $verify_status

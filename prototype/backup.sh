@@ -36,6 +36,11 @@ log() {
 
 die() {
   printf 'Error: %s\n' "$*" >&2
+  if type -t cleanup >/dev/null 2>&1; then
+    cleanup "${backup_file:-}"
+  elif [[ -n "${backup_file:-}" && -f "${backup_file:-}" ]]; then
+    rm -f "${backup_file:-}"
+  fi
   exit 1
 }
 
